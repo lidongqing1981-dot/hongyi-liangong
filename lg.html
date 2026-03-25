@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>宏醫練功 APP</title>
+<style>
+    /* 全局樣式 - 採用深色禪意風格，指定魏碑體 */
+    body {
+        margin: 0;
+        padding: 0;
+        background-color: #1a1a1a;
+        color: #e0d6c8;
+        font-family: 'Weibei SC', 'Weibei TC', 'STWeibei', 'WeiBei', 'KaiTi', 'STKaiti', serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    /* 模擬手機屏幕容器 */
+    .app-container {
+        width: 100%;
+        max-width: 400px;
+        height: 100%;
+        max-height: 800px;
+        background: radial-gradient(circle at center, #2c3e50 0%, #1a1a1a 100%);
+        position: relative;
+        box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* 頁面切換控制：基礎頁面 */
+    .page {
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+        width: 100%;
+        box-sizing: border-box;
+        text-align: center;
+    }
+    .page.active {
+        display: flex;
+        animation: fadeIn 0.5s ease;
+    }
+    .page-padded {
+        padding: 20px;
+    }
+
+    /* 75% 與 25% 專屬練功佈局 */
+    .practice-layout {
+        justify-content: flex-start;
+    }
+    .content-section {
+        height: 75%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        box-sizing: border-box;
+        overflow-y: auto;
+    }
+    .timer-section {
+        height: 25%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.25);
+        border-top: 1px solid rgba(205, 164, 52, 0.15);
+        box-sizing: border-box;
+    }
+
+    /* 文字與標題樣式 */
+    h1 { font-size: 38px; margin-bottom: 40px; letter-spacing: 4px; color: #cda434; font-weight: normal; }
+    h2 { font-size: 32px; color: #cda434; margin-bottom: 25px; font-weight: normal; }
+    h3 { font-size: 26px; color: #cda434; margin-bottom: 20px; letter-spacing: 2px; font-weight: normal; }
+    
+    .mantra-text {
+        font-size: 26px;
+        line-height: 1.8;
+        margin: 20px 0;
+        letter-spacing: 2px;
+    }
+
+    /* 主按鈕樣式 */
+    button.main-btn {
+        background-color: #cda434;
+        color: #1a1a1a;
+        border: none;
+        padding: 15px 40px;
+        font-size: 22px;
+        border-radius: 30px;
+        cursor: pointer;
+        font-family: inherit;
+        font-weight: bold;
+        transition: transform 0.2s, background-color 0.2s;
+        margin-top: 20px;
+    }
+    button.main-btn:active {
+        transform: scale(0.95);
+        background-color: #b58d2b;
+    }
+
+    /* 內聯倒計時設定區域的樣式 */
+    .inline-setup {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        animation: fadeIn 1s ease;
+    }
+    .inline-countdown {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        animation: fadeIn 0.5s ease;
+    }
+    .inline-setup-title {
+        font-size: 18px;
+        color: #888;
+        margin-bottom: 10px;
+    }
+    .time-picker-sm {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 18px;
+    }
+    .time-picker-sm input {
+        width: 50px;
+        padding: 5px;
+        font-size: 18px;
+        text-align: center;
+        background: transparent;
+        border: 1px solid #cda434;
+        color: #e0d6c8;
+        border-radius: 8px;
+        font-family: inherit;
+    }
+    button.main-btn-sm {
+        background-color: #cda434;
+        color: #1a1a1a;
+        border: none;
+        padding: 8px 30px;
+        font-size: 18px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-family: inherit;
+        font-weight: bold;
+        margin-top: 15px;
+        transition: transform 0.2s, background-color 0.2s;
+    }
+    button.main-btn-sm:active { transform: scale(0.95); background-color: #b58d2b; }
+
+    /* 跳過/次要按鈕樣式 */
+    button.skip-btn {
+        background: transparent;
+        color: #888;
+        border: 1px solid #888;
+        font-size: 14px;
+        padding: 6px 18px;
+        margin-top: 10px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-family: inherit;
+    }
+    button.skip-btn:active { background: rgba(255,255,255,0.1); }
+
+    /* 統一的小巧倒計時樣式 */
+    .timer-display {
+        font-size: 45px;
+        font-family: 'Courier New', Courier, monospace;
+        color: #cda434;
+        margin: 0;
+        text-shadow: 0 0 10px rgba(205, 164, 52, 0.5);
+    }
+
+    /* 首頁選擇介面樣式 */
+    .option-group { width: 100%; margin-bottom: 30px; background: rgba(0,0,0,0.2); padding: 20px; border-radius: 15px; }
+    .radio-container { display: flex; justify-content: space-around; margin-bottom: 20px; }
+    .radio-label { font-size: 24px; display: flex; align-items: center; cursor: pointer; }
+    .radio-label input { margin-right: 10px; transform: scale(1.5); }
+    .time-picker { display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 22px; }
+    .time-picker input { width: 60px; padding: 10px; font-size: 22px; text-align: center; background: transparent; border: 1px solid #cda434; color: #e0d6c8; border-radius: 8px; font-family: inherit; }
+
+    /* 結束頁面動畫文字 */
+    .ending-text { opacity: 0; font-size: 24px; line-height: 1.8; margin-bottom: 20px; letter-spacing: 2px; }
+    .fade-in-anim { animation: fadeInText 2s forwards; }
+
+    /* --- 開合功 雙手與氣球特效 --- */
+    .kaihe-animation { position: relative; display: flex; justify-content: center; align-items: center; height: 150px; margin: 20px 0; width: 100%; }
+    .qi-sphere { position: absolute; width: 40px; height: 40px; border-radius: 50%; background: radial-gradient(circle, rgba(205,164,52,0.8) 0%, rgba(205,164,52,0) 70%); z-index: 1; animation: qiBreathe 10s infinite ease-in-out; }
+    .palm { position: absolute; width: 65px; height: 65px; z-index: 2; }
+    .palm svg { width: 100%; height: 100%; filter: drop-shadow(0 0 8px rgba(205, 164, 52, 0.6)); }
+    .palm-left { animation: moveLeftHand 10s infinite ease-in-out; }
+    .palm-right { animation: moveRightHand 10s infinite ease-in-out; }
+    
+    /* 畫字指訣區塊 */
+    .hz-text-block { text-align: left; margin: 10px 0; line-height: 1.8; font-size: 22px; background: rgba(0,0,0,0.2); padding: 15px 20px; border-radius: 10px; width: 90%; }
+    .hz-title { font-size: 26px; color: #cda434; font-weight: bold; }
+    .hz-sub { font-size: 18px; color: #888; }
+    .note-box { margin-top: 15px; padding: 15px; border: 1px dashed #cda434; border-radius: 10px; font-size: 20px; text-align: justify; width: 90%; box-sizing: border-box; }
+
+    /* 動畫定義 */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeInText { from { opacity: 0; transform: scale(0.95); filter: blur(2px); } to { opacity: 1; transform: scale(1); filter: blur(0); } }
+    @keyframes moveLeftHand { 0%, 100% { transform: translateX(-25px) scaleX(-1); } 50% { transform: translateX(-90px) scaleX(-1); } }
+    @keyframes moveRightHand { 0%, 100% { transform: translateX(25px); } 50% { transform: translateX(90px); } }
+    @keyframes qiBreathe { 0%, 100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(4.5); opacity: 0.15; } }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+    
+    <!-- 頁面 1：主頁面 -->
+    <div id="page-home" class="page page-padded active">
+        <h1>宏醫練功</h1>
+        <button class="main-btn" onclick="gotoPage('page-select')">開始練功</button>
+    </div>
+
+    <!-- 頁面 2：三陽功時間選擇 -->
+    <div id="page-select" class="page page-padded">
+        <h2>三陽功</h2>
+        <div class="option-group">
+            <div class="radio-container">
+                <label class="radio-label"><input type="radio" name="gongfa" value="inner" checked> 內三陽</label>
+                <label class="radio-label"><input type="radio" name="gongfa" value="outer"> 外三陽</label>
+            </div>
+        </div>
+        <div class="option-group">
+            <div style="margin-bottom: 15px; font-size: 22px;">設定修煉時間</div>
+            <div class="time-picker">
+                <input type="number" id="input-hours" min="0" max="24" value="0"> 小時
+                <input type="number" id="input-minutes" min="1" max="59" value="10"> 分鐘
+            </div>
+        </div>
+        <button class="main-btn" onclick="startSanyang()">開始</button>
+        <button class="skip-btn" style="border-color: #888; font-size:18px; padding: 10px 30px;" onclick="gotoPage('page-home')">返回</button>
+    </div>
+
+    <!-- 頁面 3：三陽功 修煉倒計時模式 (75% / 25% 佈局) -->
+    <div id="page-practice" class="page practice-layout">
+        <div class="content-section">
+            <h2 id="practice-title" style="margin-bottom: 20px;">三陽功</h2>
+            <div id="practice-mantra" class="mantra-text"></div>
+        </div>
+        <div class="timer-section">
+            <div class="timer-display" id="timer-display-sanyang">00:00:00</div>
+            <!-- 時間到顯示下一步按鈕 -->
+            <button id="btn-next-sanyang" class="main-btn" style="display: none; margin-top: 10px; padding: 10px 30px;" onclick="gotoPage('page-shenyun'); triggerShenyunAnimations();">下一步</button>
+            <button id="btn-skip-sanyang" class="skip-btn" onclick="skipTimer()">跳過倒計時(測試)</button>
+        </div>
+    </div>
+
+    <!-- 頁面 4：神韻功 (75% / 25% 佈局) -->
+    <div id="page-shenyun" class="page practice-layout">
+        <div class="content-section">
+            <h2>「神韻功」</h2>
+            <div id="end-seq-0" class="ending-text" style="color: #cda434; font-size: 32px; font-weight: bold;">雙手合十</div>
+            <div id="end-seq-1" class="ending-text">
+                宏醫正主位，<br>靈感靈智在，<br>精氣養自己，<br>神魂探病災。
+            </div>
+            <div id="end-seq-2" class="ending-text">
+                心氣動，<br>神氣動，<br>靈氣動。
+            </div>
+            <div id="end-seq-3" class="ending-text" style="margin-bottom:0;">
+                上感天道信息，<br>下感地道靈氣，<br>中感人道病機，<br>宏醫先師佑我。
+            </div>
+        </div>
+        <div class="timer-section">
+            <!-- 初始隱藏，文字浮現完後顯示設定時間 -->
+            <div id="setup-shenyun" class="inline-setup">
+                <div class="inline-setup-title">設定修煉時間</div>
+                <div class="time-picker-sm">
+                    <input type="number" id="hr-shenyun" min="0" max="24" value="0"> 小時
+                    <input type="number" id="min-shenyun" min="1" max="59" value="5"> 分鐘
+                </div>
+                <button class="main-btn-sm" onclick="startInline('shenyun')">開始計時</button>
+            </div>
+            <!-- 設定時間後，顯示倒計時 -->
+            <div id="countdown-shenyun" class="inline-countdown">
+                <div class="timer-display" id="timer-display-shenyun">00:00:00</div>
+                <button id="btn-next-shenyun" class="main-btn" style="display: none; margin-top: 10px; padding: 10px 30px;" onclick="gotoPage('page-kaihe')">下一步</button>
+                <button id="btn-skip-shenyun" class="skip-btn" onclick="skipTimer()">跳過倒計時(測試)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 頁面 5：開合功修煉 (75% / 25% 佈局) -->
+    <div id="page-kaihe" class="page practice-layout">
+        <div class="content-section">
+            <h2>開合功</h2>
+            <div class="kaihe-animation">
+                <div class="qi-sphere"></div>
+                <div class="palm palm-left">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#cda434" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 11V6a2 2 0 0 0-4 0v4"></path>
+                        <path d="M14 10V4a2 2 0 0 0-4 0v6"></path>
+                        <path d="M10 10.5V3a2 2 0 0 0-4 0v9"></path>
+                        <path d="M6 14a2 2 0 0 0-2-2 2 2 0 0 0-2 2v2.5a7.5 7.5 0 0 0 15 0V11a2 2 0 0 0-2-2 2 2 0 0 0-2 2v2"></path>
+                    </svg>
+                </div>
+                <div class="palm palm-right">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#cda434" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 11V6a2 2 0 0 0-4 0v4"></path>
+                        <path d="M14 10V4a2 2 0 0 0-4 0v6"></path>
+                        <path d="M10 10.5V3a2 2 0 0 0-4 0v9"></path>
+                        <path d="M6 14a2 2 0 0 0-2-2 2 2 0 0 0-2 2v2.5a7.5 7.5 0 0 0 15 0V11a2 2 0 0 0-2-2 2 2 0 0 0-2 2v2"></path>
+                    </svg>
+                </div>
+            </div>
+            <div style="color: #888; font-size: 20px; margin-bottom: 15px;">（圖示兩掌開合，平心靜氣）</div>
+            <div style="color: #cda434; font-size: 24px; letter-spacing: 2px; line-height: 1.6;">
+                兩掌之間，似有無形彈簧相撐<br>
+                開如拉絲，合如壓簧
+            </div>
+        </div>
+        <div class="timer-section">
+            <div id="setup-kaihe" class="inline-setup" style="display: flex;">
+                <div class="inline-setup-title">設定修煉時間</div>
+                <div class="time-picker-sm">
+                    <input type="number" id="hr-kaihe" min="0" max="24" value="0"> 小時
+                    <input type="number" id="min-kaihe" min="1" max="59" value="5"> 分鐘
+                </div>
+                <button class="main-btn-sm" onclick="startInline('kaihe')">開始計時</button>
+            </div>
+            <div id="countdown-kaihe" class="inline-countdown">
+                <div class="timer-display" id="timer-display-kaihe">00:00:00</div>
+                <button id="btn-next-kaihe" class="main-btn" style="display: none; margin-top: 10px; padding: 10px 30px;" onclick="gotoPage('page-zhigong-1')">下一步</button>
+                <button id="btn-skip-kaihe" class="skip-btn" onclick="skipTimer()">跳過倒計時(測試)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 頁面 6：宏醫指功 1 (75% / 25% 佈局) -->
+    <div id="page-zhigong-1" class="page practice-layout">
+        <div class="content-section">
+            <h2>宏醫指功</h2>
+            <h3>合十變法指</h3>
+            <div class="mantra-text" style="margin-bottom: 40px;">
+                法指開，正氣來，<br>
+                神韻起，祛病災，<br>
+                宏醫先師護佑。
+            </div>
+        </div>
+        <div class="timer-section">
+            <div id="setup-zhigong1" class="inline-setup" style="display: flex;">
+                <div class="inline-setup-title">設定修煉時間</div>
+                <div class="time-picker-sm">
+                    <input type="number" id="hr-zhigong1" min="0" max="24" value="0"> 小時
+                    <input type="number" id="min-zhigong1" min="1" max="59" value="5"> 分鐘
+                </div>
+                <button class="main-btn-sm" onclick="startInline('zhigong1')">開始計時</button>
+            </div>
+            <div id="countdown-zhigong1" class="inline-countdown">
+                <div class="timer-display" id="timer-display-zhigong1">00:00:00</div>
+                <button id="btn-next-zhigong1" class="main-btn" style="display: none; margin-top: 10px; padding: 10px 30px;" onclick="gotoPage('page-zhigong-2')">下一步</button>
+                <button id="btn-skip-zhigong1" class="skip-btn" onclick="skipTimer()">跳過倒計時(測試)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 頁面 7：法指畫字 & 註釋 (75% / 25% 佈局) -->
+    <div id="page-zhigong-2" class="page practice-layout">
+        <div class="content-section">
+            <h2>法指畫字</h2>
+            <div class="hz-text-block">
+                <div style="margin-bottom: 10px;">
+                    <span class="hz-title">「善，行」</span><br>
+                    善在手掌握，行走平安路 <span class="hz-sub">（左手左腳）</span>
+                </div>
+                <div>
+                    <span class="hz-title">「仁，德」</span><br>
+                    仁在掌心留，德行路路通 <span class="hz-sub">（右手右腳）</span>
+                </div>
+            </div>
+            <div class="note-box">
+                <span style="color: #cda434; font-weight: bold;">註釋：</span>實施時：消 散 通。<br>
+                消其形，散其結，通其氣。
+            </div>
+        </div>
+        <div class="timer-section">
+            <div id="setup-zhigong2" class="inline-setup" style="display: flex;">
+                <div class="inline-setup-title">設定修煉時間</div>
+                <div class="time-picker-sm">
+                    <input type="number" id="hr-zhigong2" min="0" max="24" value="0"> 小時
+                    <input type="number" id="min-zhigong2" min="1" max="59" value="5"> 分鐘
+                </div>
+                <button class="main-btn-sm" onclick="startInline('zhigong2')">開始計時</button>
+            </div>
+            <div id="countdown-zhigong2" class="inline-countdown">
+                <div class="timer-display" id="timer-display-zhigong2">00:00:00</div>
+                <!-- 最終步：收功 -->
+                <button id="btn-next-zhigong2" class="main-btn" style="display: none; margin-top: 10px; padding: 10px 30px;" onclick="gotoPage('page-home')">收功</button>
+                <button id="btn-skip-zhigong2" class="skip-btn" onclick="skipTimer()">跳過倒計時(測試)</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    /* ================= 計時器核心系統 ================= */
+    let currentTimer;
+    let remainingTime = 0;
+    let activeTimerDisplay = '';
+    let timerCallback = null;
+
+    function startTimer(displayId, onEnd) {
+        activeTimerDisplay = displayId;
+        timerCallback = onEnd;
+        updateTimerText();
+        
+        clearInterval(currentTimer);
+        currentTimer = setInterval(() => {
+            remainingTime--;
+            updateTimerText();
+            if (remainingTime <= 0) {
+                clearInterval(currentTimer);
+                if(timerCallback) timerCallback();
+            }
+        }, 1000);
+    }
+
+    function updateTimerText() {
+        const h = Math.floor(remainingTime / 3600).toString().padStart(2, '0');
+        const m = Math.floor((remainingTime % 3600) / 60).toString().padStart(2, '0');
+        const s = (remainingTime % 60).toString().padStart(2, '0');
+        const el = document.getElementById(activeTimerDisplay);
+        if(el) el.innerText = `${h}:${m}:${s}`;
+    }
+
+    // 點擊跳過測試時，將時間歸零，並觸發結束回調（顯示按鈕）
+    function skipTimer() {
+        remainingTime = 0;
+        updateTimerText();
+        clearInterval(currentTimer);
+        if(timerCallback) timerCallback();
+    }
+
+    /* ================= 頁面切換系統 ================= */
+    function gotoPage(pageId) {
+        // 離開頁面時清除背景計時器
+        clearInterval(currentTimer);
+
+        document.querySelectorAll('.page').forEach(page => {
+            page.classList.remove('active');
+        });
+        document.getElementById(pageId).classList.add('active');
+
+        // 回到首頁時，重置所有頁面的按鈕和動畫狀態
+        if(pageId === 'page-home') {
+            resetAllPages();
+        }
+    }
+
+    /* ================= 業務流程邏輯 ================= */
+    
+    // 1. 三陽功
+    function startSanyang() {
+        const type = document.querySelector('input[name="gongfa"]:checked').value;
+        const mantraEl = document.getElementById('practice-mantra');
+        const titleEl = document.getElementById('practice-title');
+
+        if (type === 'inner') {
+            titleEl.innerText = "【內三陽】";
+            mantraEl.innerHTML = "印堂彌勒佛<br>心裡蓮花座<br>丹田虎虎威";
+        } else {
+            titleEl.innerText = "【外三陽】";
+            mantraEl.innerHTML = "眼睛有神<br>印堂有光<br>雙手有熱";
+        }
+
+        const h = parseInt(document.getElementById('input-hours').value) || 0;
+        const m = parseInt(document.getElementById('input-minutes').value) || 0;
+        remainingTime = (h * 3600) + (m * 60);
+
+        if (remainingTime <= 0) {
+            alert("請設定有效的修煉時間！");
+            return;
+        }
+
+        gotoPage('page-practice');
+        // 時間到：浮現下一步按鈕
+        startTimer('timer-display-sanyang', () => {
+            document.getElementById('btn-next-sanyang').style.display = 'inline-block';
+            document.getElementById('btn-skip-sanyang').style.display = 'none';
+        });
+    }
+
+    // 2. 神韻功心法逐字浮現
+    function triggerShenyunAnimations() {
+        setTimeout(() => { document.getElementById('end-seq-0').classList.add('fade-in-anim'); }, 500);
+        setTimeout(() => { document.getElementById('end-seq-1').classList.add('fade-in-anim'); }, 2500);
+        setTimeout(() => { document.getElementById('end-seq-2').classList.add('fade-in-anim'); }, 6000);
+        setTimeout(() => { document.getElementById('end-seq-3').classList.add('fade-in-anim'); }, 9500);
+        
+        // 文字浮現完畢後，在底部顯示「設定修煉時間」面板
+        setTimeout(() => { 
+            const setupEl = document.getElementById('setup-shenyun');
+            setupEl.style.display = 'flex';
+            setupEl.classList.add('fade-in-anim'); 
+        }, 13000);
+    }
+
+    // 3. 通用：內聯頁面的倒計時啟動 (適用於 神韻、開合、指功1、指功2)
+    function startInline(key) {
+        const h = parseInt(document.getElementById('hr-' + key).value) || 0;
+        const m = parseInt(document.getElementById('min-' + key).value) || 0;
+        remainingTime = (h * 3600) + (m * 60);
+
+        if (remainingTime <= 0) {
+            alert("請設定有效的修煉時間！");
+            return;
+        }
+
+        // 隱藏設定面板，顯示倒計時面板
+        document.getElementById('setup-' + key).style.display = 'none';
+        document.getElementById('countdown-' + key).style.display = 'flex';
+
+        // 啟動倒計時，時間到後顯示「下一步 / 收功」按鈕
+        startTimer('timer-display-' + key, () => {
+            document.getElementById('btn-next-' + key).style.display = 'inline-block';
+            document.getElementById('btn-skip-' + key).style.display = 'none';
+        });
+    }
+
+    // 重置所有頁面狀態，為了下一次練功準備
+    function resetAllPages() {
+        // 重置三陽功
+        document.getElementById('btn-next-sanyang').style.display = 'none';
+        document.getElementById('btn-skip-sanyang').style.display = 'inline-block';
+
+        // 重置神韻功文字動畫與面板
+        for(let i=0; i<=3; i++) {
+            document.getElementById('end-seq-' + i).classList.remove('fade-in-anim');
+        }
+        document.getElementById('setup-shenyun').style.display = 'none';
+        document.getElementById('setup-shenyun').classList.remove('fade-in-anim');
+        document.getElementById('countdown-shenyun').style.display = 'none';
+        document.getElementById('btn-next-shenyun').style.display = 'none';
+        document.getElementById('btn-skip-shenyun').style.display = 'inline-block';
+
+        // 重置後續頁面的面板狀態 (開合功、指功1、指功2)
+        const keys =['kaihe', 'zhigong1', 'zhigong2'];
+        keys.forEach(k => {
+            document.getElementById('setup-' + k).style.display = 'flex';
+            document.getElementById('countdown-' + k).style.display = 'none';
+            document.getElementById('btn-next-' + k).style.display = 'none';
+            document.getElementById('btn-skip-' + k).style.display = 'inline-block';
+        });
+    }
+</script>
+
+</body>
+</html>
