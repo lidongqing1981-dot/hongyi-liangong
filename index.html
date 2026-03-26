@@ -194,7 +194,7 @@
     .time-picker { display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 22px; }
     .time-picker input { width: 60px; padding: 10px; font-size: 22px; text-align: center; background: transparent; border: 1px solid #cda434; color: #e0d6c8; border-radius: 8px; font-family: inherit; }
 
-    /* 神韻功結束頁面動畫文字 - 字號已改小 */
+    /* 神韻功結束頁面動畫文字 - 字號已微調 */
     .ending-text { opacity: 0; font-size: 20px; line-height: 1.8; margin-bottom: 15px; letter-spacing: 2px; }
     .fade-in-anim { animation: fadeInText 2s forwards; }
 
@@ -268,7 +268,6 @@
     <div id="page-shenyun" class="page practice-layout">
         <div class="content-section">
             <h2>「神韻功」</h2>
-            <!-- 標題字號微調至 28px -->
             <div id="end-seq-0" class="ending-text" style="color: #cda434; font-size: 28px; font-weight: bold;">雙手合十</div>
             <div id="end-seq-1" class="ending-text">
                 宏醫正主位，<br>靈感靈智在，<br>精氣養自己，<br>神魂探病災。
@@ -281,7 +280,6 @@
             </div>
         </div>
         <div class="timer-section">
-            <!-- 初始隱藏，文字浮現完後顯示設定時間 -->
             <div id="setup-shenyun" class="inline-setup">
                 <div class="inline-setup-title">設定修煉時間</div>
                 <div class="time-picker-sm">
@@ -290,7 +288,6 @@
                 </div>
                 <button class="main-btn-sm" onclick="startInline('shenyun')">開始計時</button>
             </div>
-            <!-- 設定時間後，顯示倒計時 -->
             <div id="countdown-shenyun" class="inline-countdown">
                 <div class="timer-display" id="timer-display-shenyun">00:00:00</div>
                 <button id="btn-next-shenyun" class="main-btn" style="display: none; margin-top: 10px; padding: 10px 30px;" onclick="gotoPage('page-kaihe')">下一步</button>
@@ -403,7 +400,6 @@
             </div>
             <div id="countdown-zhigong2" class="inline-countdown">
                 <div class="timer-display" id="timer-display-zhigong2">00:00:00</div>
-                <!-- 最終步：收功 -->
                 <button id="btn-next-zhigong2" class="main-btn" style="display: none; margin-top: 10px; padding: 10px 30px;" onclick="gotoPage('page-home')">收功</button>
                 <button id="btn-skip-zhigong2" class="skip-btn" onclick="skipTimer()">跳過倒計時(測試)</button>
             </div>
@@ -413,6 +409,55 @@
 </div>
 
 <script>
+    /* ================= Web Audio API 內置鐘聲合成 (完全不用下載音頻文件) ================= */
+    let audioCtx;
+
+    // 初始化音頻引擎 (必須在用戶第一次點擊屏幕時執行才能解鎖蘋果設備的限制)
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+
+    // 監聽第一次點擊或觸摸以解鎖音頻
+    document.addEventListener('click', initAudio, { once: true });
+    document.addEventListener('touchstart', initAudio, { once: true });
+
+    // 播放合成的「禪修頌缽 / 寺廟鐘聲」
+    function playBellSound() {
+        if (!audioCtx) initAudio();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
+        const t = audioCtx.currentTime;
+        
+        // 模擬金剛鈴/頌缽的 432Hz 療癒頻率及不協和泛音
+        const freqs =[432, 1192.3, 2332.8]; 
+        const gains =[0.8, 0.4, 0.2]; // 主音最大，泛音遞減
+        const decays =[5, 3, 1.5];    // 高頻聲音消失得快，低頻持久
+
+        freqs.forEach((freq, index) => {
+            const osc = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, t);
+
+            // 敲擊的聲音包絡線 (瞬間變大，然後緩慢衰減)
+            gainNode.gain.setValueAtTime(0, t);
+            gainNode.gain.linearRampToValueAtTime(gains[index], t + 0.02);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, t + decays[index]);
+
+            osc.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            osc.start(t);
+            osc.stop(t + decays[index]);
+        });
+    }
+
     /* ================= 計時器核心系統 ================= */
     let currentTimer;
     let remainingTime = 0;
@@ -430,6 +475,7 @@
             updateTimerText();
             if (remainingTime <= 0) {
                 clearInterval(currentTimer);
+                playBellSound();  // <---- 倒數結束，觸發內置鐘聲
                 if(timerCallback) timerCallback();
             }
         }, 1000);
@@ -443,34 +489,30 @@
         if(el) el.innerText = `${h}:${m}:${s}`;
     }
 
-    // 點擊跳過測試時，將時間歸零，並觸發結束回調（顯示按鈕）
     function skipTimer() {
         remainingTime = 0;
         updateTimerText();
         clearInterval(currentTimer);
+        playBellSound();  // <---- 測試跳過時，也觸發內置鐘聲
         if(timerCallback) timerCallback();
     }
 
     /* ================= 頁面切換系統 ================= */
     function gotoPage(pageId) {
-        // 離開頁面時清除背景計時器
         clearInterval(currentTimer);
-
-        document.querySelectorAll('.page').forEach(page => {
-            page.classList.remove('active');
-        });
+        document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
         document.getElementById(pageId).classList.add('active');
 
-        // 回到首頁時，重置所有頁面的按鈕和動畫狀態
-        if(pageId === 'page-home') {
-            resetAllPages();
-        }
+        if(pageId === 'page-home') resetAllPages();
     }
 
     /* ================= 業務流程邏輯 ================= */
     
     // 1. 三陽功
     function startSanyang() {
+        // 確保音頻引擎喚醒
+        initAudio(); 
+
         const type = document.querySelector('input[name="gongfa"]:checked').value;
         const mantraEl = document.getElementById('practice-mantra');
         const titleEl = document.getElementById('practice-title');
@@ -493,7 +535,6 @@
         }
 
         gotoPage('page-practice');
-        // 時間到：浮現下一步按鈕
         startTimer('timer-display-sanyang', () => {
             document.getElementById('btn-next-sanyang').style.display = 'inline-block';
             document.getElementById('btn-skip-sanyang').style.display = 'none';
@@ -507,7 +548,6 @@
         setTimeout(() => { document.getElementById('end-seq-2').classList.add('fade-in-anim'); }, 6000);
         setTimeout(() => { document.getElementById('end-seq-3').classList.add('fade-in-anim'); }, 9500);
         
-        // 文字浮現完畢後，在底部顯示「設定修煉時間」面板
         setTimeout(() => { 
             const setupEl = document.getElementById('setup-shenyun');
             setupEl.style.display = 'flex';
@@ -515,8 +555,10 @@
         }, 13000);
     }
 
-    // 3. 通用：內聯頁面的倒計時啟動 (適用於 神韻、開合、指功1、指功2)
+    // 3. 通用：內聯頁面的倒計時啟動
     function startInline(key) {
+        initAudio(); // 再次確保音頻喚醒
+
         const h = parseInt(document.getElementById('hr-' + key).value) || 0;
         const m = parseInt(document.getElementById('min-' + key).value) || 0;
         remainingTime = (h * 3600) + (m * 60);
@@ -526,24 +568,20 @@
             return;
         }
 
-        // 隱藏設定面板，顯示倒計時面板
         document.getElementById('setup-' + key).style.display = 'none';
         document.getElementById('countdown-' + key).style.display = 'flex';
 
-        // 啟動倒計時，時間到後顯示「下一步 / 收功」按鈕
         startTimer('timer-display-' + key, () => {
             document.getElementById('btn-next-' + key).style.display = 'inline-block';
             document.getElementById('btn-skip-' + key).style.display = 'none';
         });
     }
 
-    // 重置所有頁面狀態，為了下一次練功準備
+    // 重置所有狀態
     function resetAllPages() {
-        // 重置三陽功
         document.getElementById('btn-next-sanyang').style.display = 'none';
         document.getElementById('btn-skip-sanyang').style.display = 'inline-block';
 
-        // 重置神韻功文字動畫與面板
         for(let i=0; i<=3; i++) {
             document.getElementById('end-seq-' + i).classList.remove('fade-in-anim');
         }
@@ -553,7 +591,6 @@
         document.getElementById('btn-next-shenyun').style.display = 'none';
         document.getElementById('btn-skip-shenyun').style.display = 'inline-block';
 
-        // 重置後續頁面的面板狀態 (開合功、指功1、指功2)
         const keys =['kaihe', 'zhigong1', 'zhigong2'];
         keys.forEach(k => {
             document.getElementById('setup-' + k).style.display = 'flex';
